@@ -6,10 +6,10 @@ ENERGIBRIDGE="$HOME/Desktop/sustainable/adblocker/EnergiBridge/target/release/en
 OUTDIR="$HOME/Desktop/sustainable/adblocker/energibridge_outputs"
 SCROLLER="$HOME/Desktop/sustainable/adblocker/scroll_chrome.py"
 
-# Your real Chrome data dir (not to run measurements directly against this)
+# Your real Chrome data dir (DO NOT run measurements directly against this)
 REAL_DATA_DIR="$HOME/.config/google-chrome"
 
-# Where we create safe copies
+# Where we create SAFE copies (these are what we actually launch)
 RUN_BASE="$HOME/Desktop/sustainable/adblocker/chrome_userdata_clones"
 
 mkdir -p "$OUTDIR" "$RUN_BASE"
@@ -45,9 +45,9 @@ clone_profile() {
 }
 
 run_profile() {
-  local profile="$1"   
-  local tag="$2"     
-  local port="$3"     
+  local profile="$1"   # "Profile 1"
+  local tag="$2"       # "profile1"
+  local port="$3"      # 9222, 9223, ...
 
   local ts out user_data_dir
   ts=$(date +"%Y%m%d_%H%M%S")
@@ -94,5 +94,45 @@ run_profile() {
 }
 
 # IMPORTANT: close all normal Chrome windows before running this once.
-run_profile "Profile 1" "profile1" 9222
-run_profile "Profile 2" "profile2" 9223
+# After that, it’s isolated anyway.
+# run_profile "Profile 1" "profile1" 9222
+# run_profile "Profile 2" "profile2" 9223
+
+
+RUNS=30
+
+PROFILES=(
+  "Profile 1:profile1:9222"
+  "Profile 2:profile2:9223"
+)
+
+for run in $(seq 1 "$RUNS"); do
+  echo
+  echo "=============================="
+  echo " Starting experiment run $run "
+  echo "=============================="
+
+  # Shuffle profile order for this run
+  mapfile -t SHUFFLED < <(printf '%s\n' "${PROFILES[@]}" | shuf)
+
+  first=1
+  for entry in "${SHUFFLED[@]}"; do
+    IFS=":" read -r profile tag port <<< "$entry"
+
+    # 15s cooldown BETWEEN profiles (but not before the first one)
+    if [[ $first -eq 0 ]]; then
+      echo "[info] Cooldown between profiles: 15s"
+      sleep 15
+    fi
+    first=0
+
+    run_profile "$profile" "$tag" "$port"
+  done
+
+  # 30s cooldown AFTER both profiles
+  echo "[info] Cooldown after run $run: 30s"
+  sleep 30
+done
+
+echo
+echo "All measurements complete. CSVs are in: ${OUTDIR}"
