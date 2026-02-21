@@ -14,6 +14,11 @@ RUN_BASE="$HOME/Desktop/sustainable/adblocker/chrome_userdata_clones"
 
 mkdir -p "$OUTDIR" "$RUN_BASE"
 
+WARMUP_OUTDIR="$HOME/Desktop/sustainable/adblocker/energibridge_outputs_warmup"
+WARMUP_RUNS=3
+
+mkdir -p "$WARMUP_OUTDIR"
+
 # Clone only what we need for each profile into a dedicated user-data-dir.
 # This avoids profile locks + avoids corrupting real profiles.
 clone_profile() {
@@ -98,13 +103,53 @@ run_profile() {
 # run_profile "Profile 1" "profile1" 9222
 # run_profile "Profile 2" "profile2" 9223
 
-
-RUNS=30
+ORIGINAL_OUTDIR="$OUTDIR"
+OUTDIR="$WARMUP_OUTDIR"
 
 PROFILES=(
   "Profile 1:profile1:9222"
   "Profile 2:profile2:9223"
 )
+
+echo
+echo "############################################"
+echo "#           WARM-UP PHASE (3 runs)          #"
+echo "#   Results stored separately and ignored  #"
+echo "############################################"
+
+for run in $(seq 1 "$WARMUP_RUNS"); do
+  echo
+  echo "------------------------------"
+  echo " Warm-up run $run / $WARMUP_RUNS"
+  echo "------------------------------"
+
+  # Randomize order even during warm-up
+  mapfile -t SHUFFLED < <(printf '%s\n' "${PROFILES[@]}" | shuf)
+
+  first=1
+  for entry in "${SHUFFLED[@]}"; do
+    IFS=":" read -r profile tag port <<< "$entry"
+
+    if [[ $first -eq 0 ]]; then
+      echo "[warmup] Cooldown between profiles: 15s"
+      sleep 15
+    fi
+    first=0
+
+    run_profile "$profile" "$tag" "$port"
+  done
+
+  echo "[warmup] Cooldown after warm-up run $run: 30s"
+  sleep 30
+done
+
+echo
+echo "[warmup] Warm-up phase complete."
+echo "[warmup] Warm-up CSVs saved in: $WARMUP_OUTDIR"
+
+RUNS=30
+OUTDIR="$ORIGINAL_OUTDIR"
+
 
 for run in $(seq 1 "$RUNS"); do
   echo
