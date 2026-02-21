@@ -40,7 +40,7 @@ Median Difference = -174.674 J
 # CONFIG
 # ============================
 
-DATA_FOLDER = "./energibridge_outputs"
+DATA_FOLDER = "../energibridge_outputs"
 ENERGY_COLUMN = "PACKAGE_ENERGY (J)"
 ALPHA = 0.05
 
